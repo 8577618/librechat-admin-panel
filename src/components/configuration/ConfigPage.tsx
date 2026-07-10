@@ -17,6 +17,8 @@ import {
   resetBaseConfigFn,
   baseConfigOptions,
   saveBaseConfigFn,
+  getLangfuseConnectionFn,
+  LANGFUSE_CONNECTION_QUERY_KEY,
 } from '@/server';
 import {
   flattenObject,
@@ -30,7 +32,12 @@ import {
 } from '@/utils';
 import { useLocalize, useHighlightRef, useActiveSection, useCapabilities } from '@/hooks';
 import { CONFIG_TABS, OTHER_TAB, SECTION_META, HIDDEN_SECTIONS } from './configMeta';
-import { applyConfigEdit, mergeIndexedArrayEdits, partitionScopeResetPaths } from './utils';
+import {
+  applyConfigEdit,
+  mergeIndexedArrayEdits,
+  partitionScopeResetPaths,
+  withLangfuseConfiguredPath,
+} from './utils';
 import { validateMcpCrossField } from './sections/McpServersRenderer';
 import { ScopeSelector, ScopeTriggerButton } from './ScopeSelector';
 import { StickyActionBar } from '@/components/shared';
@@ -286,7 +293,22 @@ export function ConfigPage({ initialTab, highlightField, initialScope }: t.Confi
     return new Set(scopeChangedPaths);
   }, [scopeChangedPaths]);
 
-  const activeConfiguredPaths = isEditingScope ? scopeConfiguredPaths : configuredPaths;
+  const { data: langfuseConnection } = useQuery({
+    queryKey: LANGFUSE_CONNECTION_QUERY_KEY,
+    queryFn: () => getLangfuseConnectionFn(),
+    enabled:
+      !isEditingScope &&
+      schemaTree.some((section) => section.key === 'langfuse') &&
+      sectionPermissions.langfuse?.canEdit === true,
+    retry: false,
+  });
+
+  const baseConfiguredPaths = useMemo(
+    () => withLangfuseConfiguredPath(configuredPaths, langfuseConnection?.configured === true),
+    [configuredPaths, langfuseConnection?.configured],
+  );
+
+  const activeConfiguredPaths = isEditingScope ? scopeConfiguredPaths : baseConfiguredPaths;
 
   const tabConfiguredCounts = useMemo(() => {
     if (activeConfiguredPaths.size === 0) return {};
