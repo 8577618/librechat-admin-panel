@@ -1165,6 +1165,7 @@
   "com_cap_cat_roles": "角色",
   "com_cap_cat_config": "配置",
   "com_cap_cat_content": "内容",
+  "com_cap_cat_providers": "模型提供商",
   "com_cap_cat_system": "系统",
   "com_cap_access_admin": "管理员访问权限",
   "com_cap_read_users": "读取用户",

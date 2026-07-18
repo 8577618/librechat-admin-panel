@@ -18,6 +18,7 @@ const zhCNGlossary = {
   com_access_col_name: '名称',
   com_access_tab_groups: '群组',
   com_cap_cat_groups: '群组',
+  com_cap_cat_providers: '模型提供商',
   com_cap_col_name: '名称',
   com_cap_col_status: '状态',
   com_cap_edit_title: '编辑 {{name}} 的能力',
