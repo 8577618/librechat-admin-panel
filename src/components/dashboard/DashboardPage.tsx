@@ -14,6 +14,13 @@ const QUICK_LINKS: (t.NavItem & { descKey: string })[] = [
     capability: SystemCapabilities.READ_CONFIGS,
   },
   {
+    labelKey: 'com_nav_providers',
+    path: '/providers',
+    icon: 'settings',
+    descKey: 'com_dash_providers_desc',
+    capability: SystemCapabilities.READ_PROVIDERS,
+  },
+  {
     labelKey: 'com_nav_access',
     path: '/access',
     icon: 'user',
