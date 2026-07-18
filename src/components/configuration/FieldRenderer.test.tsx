@@ -1,14 +1,39 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type * as t from '@/types';
-import { formatDefault, SingleFieldRenderer, FieldRenderer } from './FieldRenderer';
+import {
+  formatDefault,
+  renderInlineField,
+  SingleFieldRenderer,
+  FieldRenderer,
+} from './FieldRenderer';
 import { createField } from '@/test/fixtures';
 
 vi.mock('@/hooks/useLocalize', () => ({
-  default: () => (key: string) =>
-    ({ com_config_option_capability_deferred_tools: '延迟工具' })[key] ?? key,
-  useLocalize: () => (key: string) =>
-    ({ com_config_option_capability_deferred_tools: '延迟工具' })[key] ?? key,
+  default: () => (key: string, interpolation?: Record<string, string | number>) => {
+    if (key === 'com_ui_add_item') return `添加 ${interpolation?.item ?? ''}`;
+    return (
+      {
+        com_config_field_default: '默认',
+        com_config_field_defaultModel: '默认模型',
+        com_config_field_default_item: '模型',
+        com_config_option_capability_deferred_tools: '延迟工具',
+        com_ui_item: '项',
+      }[key] ?? key
+    );
+  },
+  useLocalize: () => (key: string, interpolation?: Record<string, string | number>) => {
+    if (key === 'com_ui_add_item') return `添加 ${interpolation?.item ?? ''}`;
+    return (
+      {
+        com_config_field_default: '默认',
+        com_config_field_defaultModel: '默认模型',
+        com_config_field_default_item: '模型',
+        com_config_option_capability_deferred_tools: '延迟工具',
+        com_ui_item: '项',
+      }[key] ?? key
+    );
+  },
 }));
 
 interface MockSwitchProps {
@@ -194,6 +219,41 @@ describe('SingleFieldRenderer', () => {
     );
     expect(screen.getByDisplayValue('example.com')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test.org')).toBeInTheDocument();
+  });
+
+  it('uses the model-specific item label for inline endpoint model lists', () => {
+    const field = createField({
+      key: 'default',
+      type: 'array<string>',
+      isArray: true,
+      path: 'models.default',
+    });
+
+    render(
+      renderInlineField(
+        field,
+        { default: ['gpt-5.6-sol'] },
+        'models',
+        noop,
+        (key, interpolation) => {
+          if (key === 'com_ui_add_item') return `添加 ${interpolation?.item ?? ''}`;
+          return (
+            {
+              com_config_field_default: '默认',
+              com_config_field_defaultModel: '默认模型',
+              com_config_field_default_item: '模型',
+              com_ui_item: '项',
+            }[key] ?? key
+          );
+        },
+        false,
+        undefined,
+        true,
+      ),
+    );
+
+    expect(screen.getByRole('button', { name: '添加 模型' })).toBeInTheDocument();
+    expect(screen.getByText('默认模型')).toBeInTheDocument();
   });
 
   it('localizes capability enum options', () => {

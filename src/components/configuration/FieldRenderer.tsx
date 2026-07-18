@@ -181,7 +181,11 @@ export function SingleFieldRenderer({
   const description = field.description || undefined;
   const currentValue = getValue(path, value);
   const fieldId = path.replace(/\./g, '-');
-  const fieldLabel = localize(`com_config_field_${field.key}`);
+  const fieldLabelKey =
+    field.key === 'default' && field.path.endsWith('models.default')
+      ? 'com_config_field_defaultModel'
+      : `com_config_field_${field.key}`;
+  const fieldLabel = localize(fieldLabelKey);
   const isConfigured = configuredPaths?.has(path);
   const isDbOverride = dbOverridePaths?.has(path);
   const isTouched = touchedPaths?.has(path);
@@ -970,7 +974,11 @@ export function renderInlineField(
   const fieldValue = values[field.key];
   const controlType = getControlType(field);
   const fieldId = `${parentPath}-${field.key}`.replace(/\./g, '-');
-  const fieldLabel = localize(`com_config_field_${field.key}`);
+  const fieldLabelKey =
+    field.key === 'default' && field.path.endsWith('models.default')
+      ? 'com_config_field_defaultModel'
+      : `com_config_field_${field.key}`;
+  const fieldLabel = localize(fieldLabelKey);
   const required = showRequired && !field.isOptional;
 
   if (field.children && field.children.length > 0 && !field.isArray && field.type !== 'record') {
@@ -1061,6 +1069,7 @@ export function renderInlineField(
             id={fieldId}
             values={arrayValue.map(String)}
             onChange={(v) => onChange(field.key, v)}
+            itemLabel={localize(`com_config_field_${field.key}_item`)}
             disabled={disabled}
             options={
               itemType.startsWith('enum(')
