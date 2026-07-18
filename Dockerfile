@@ -38,10 +38,10 @@ COPY server.ts package.json ./
 RUN chown -R bun:bun /app
 USER bun
 
-ENV PORT=3000
+ENV PORT=34173
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD bun -e "fetch(\`http://localhost:\${process.env.PORT}/health\`).then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"
 
-EXPOSE 3000
+EXPOSE 34173
 CMD ["bun", "run", "start"]

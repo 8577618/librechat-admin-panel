@@ -196,9 +196,9 @@ The main barrel (`@librechat/data-schemas`) pulls in Node.js-only modules (`asyn
 
 ```bash
 bun install
-bun run dev          # starts dev server on port 3000
+bun run dev          # starts dev server on port 34173
 bun run build        # production build
-bun run start        # serves production build on port 3000 (requires SESSION_SECRET)
+bun run start        # serves production build on port 34173 (requires SESSION_SECRET)
 bun run test         # vitest unit tests
 bun run test:e2e     # playwright e2e tests
 ```

@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'html',
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:34173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -28,8 +28,8 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'npx vite dev --port 3000',
-      url: 'http://localhost:3000',
+      command: 'npx vite dev --port 34173',
+      url: 'http://localhost:34173',
       reuseExistingServer: true,
       timeout: 30_000,
       env: { ...process.env, VITE_API_BASE_URL: 'http://localhost:3081' },
