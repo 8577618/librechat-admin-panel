@@ -8,7 +8,7 @@ import {
   countConfigured,
   getArrayItemType,
   getControlType,
-  getEnumOptions,
+  getLocalizedEnumOptions,
   hasDescendant,
   toKVPair,
   isStringLikeItemType,
@@ -33,9 +33,9 @@ import { ConfigRow } from './ConfigRow';
 import { useLocalize } from '@/hooks';
 import { cn } from '@/utils';
 
-function formatDefault(value: t.ConfigValue): string | null {
+export function formatDefault(value: t.ConfigValue, localize: t.LocalizeFn): string | null {
   if (value === undefined || value === null) return null;
-  if (typeof value === 'boolean') return value ? 'on' : 'off';
+  if (typeof value === 'boolean') return localize(value ? 'com_ui_on' : 'com_ui_off');
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') return value.length > 40 ? `${value.slice(0, 37)}…` : value;
   return null;
@@ -186,7 +186,7 @@ export function SingleFieldRenderer({
   const isDbOverride = dbOverridePaths?.has(path);
   const isTouched = touchedPaths?.has(path);
   const isPendingReset = pendingResets?.has(path) ?? false;
-  const defaultHint = schemaDefaults ? formatDefault(schemaDefaults[path]) : null;
+  const defaultHint = schemaDefaults ? formatDefault(schemaDefaults[path], localize) : null;
 
   if (showConfiguredOnly && !isConfigured && !hasDescendant(path, configuredPaths)) return null;
 
@@ -232,7 +232,7 @@ export function SingleFieldRenderer({
   }
 
   if (controlType === 'select') {
-    const options = getEnumOptions(field.type);
+    const options = getLocalizedEnumOptions(field.key, field.type, localize);
     const control = (
       <SelectField
         id={fieldId}
@@ -334,7 +334,11 @@ export function SingleFieldRenderer({
             onChange={(v) => onChange(path, v)}
             itemLabel={localize(`com_config_field_${field.key}_item`)}
             disabled={disabled}
-            options={itemType.startsWith('enum(') ? getEnumOptions(itemType) : undefined}
+            options={
+              itemType.startsWith('enum(')
+                ? getLocalizedEnumOptions(field.key, itemType, localize)
+                : undefined
+            }
             aria-label={fieldLabel}
           />
         </ConfigRow>
@@ -551,10 +555,7 @@ function BooleanChip({ value }: { value: boolean }) {
   const localize = useLocalize();
   return (
     <span
-      className={cn(
-        'boolean-chip self-start',
-        value ? 'boolean-chip-true' : 'boolean-chip-false',
-      )}
+      className={cn('boolean-chip self-start', value ? 'boolean-chip-true' : 'boolean-chip-false')}
       aria-label={localize(value ? 'com_ui_true' : 'com_ui_false')}
     >
       {localize(value ? 'com_ui_true' : 'com_ui_false')}
@@ -651,9 +652,7 @@ export function NestedGroup({
           >
             <Icon name="chevron-right" size="xs" />
           </span>
-          <span className="text-sm font-medium text-(--cui-color-text-default)">
-            {label}
-          </span>
+          <span className="text-sm font-medium text-(--cui-color-text-default)">{label}</span>
           {totalCount > 0 && (
             <span
               className={cn(
@@ -1011,7 +1010,7 @@ export function renderInlineField(
   }
 
   if (controlType === 'select') {
-    const options = getEnumOptions(field.type);
+    const options = getLocalizedEnumOptions(field.key, field.type, localize);
     return (
       <InlineRow key={field.key} label={fieldLabel} fieldId={fieldId} required={required}>
         <SelectField
@@ -1063,7 +1062,11 @@ export function renderInlineField(
             values={arrayValue.map(String)}
             onChange={(v) => onChange(field.key, v)}
             disabled={disabled}
-            options={itemType.startsWith('enum(') ? getEnumOptions(itemType) : undefined}
+            options={
+              itemType.startsWith('enum(')
+                ? getLocalizedEnumOptions(field.key, itemType, localize)
+                : undefined
+            }
             aria-label={fieldLabel}
           />
         </InlineRow>

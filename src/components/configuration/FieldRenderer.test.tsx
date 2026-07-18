@@ -1,12 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type * as t from '@/types';
-import { SingleFieldRenderer, FieldRenderer } from './FieldRenderer';
+import { formatDefault, SingleFieldRenderer, FieldRenderer } from './FieldRenderer';
 import { createField } from '@/test/fixtures';
 
 vi.mock('@/hooks/useLocalize', () => ({
-  default: () => (key: string) => key,
-  useLocalize: () => (key: string) => key,
+  default: () => (key: string) =>
+    ({ com_config_option_capability_deferred_tools: '延迟工具' })[key] ?? key,
+  useLocalize: () => (key: string) =>
+    ({ com_config_option_capability_deferred_tools: '延迟工具' })[key] ?? key,
 }));
 
 interface MockSwitchProps {
@@ -78,17 +80,33 @@ vi.mock('@clickhouse/click-ui', () => ({
     },
   ),
   Icon: ({ name }: MockIconProps) => <span data-testid={`icon-${name}`} />,
-  Button: ({ label, onClick }: MockButtonProps) => (
-    <button onClick={onClick}>{label}</button>
-  ),
+  Button: ({ label, onClick }: MockButtonProps) => <button onClick={onClick}>{label}</button>,
   IconButton: ({ icon, onClick, ...props }: MockIconButtonProps) => (
-    <button onClick={onClick} aria-label={props['aria-label'] ?? icon} data-testid={`icon-button-${icon}`} />
+    <button
+      onClick={onClick}
+      aria-label={props['aria-label'] ?? icon}
+      data-testid={`icon-button-${icon}`}
+    />
   ),
   TextField: ({ id, value, placeholder, onChange, onBlur, type }: MockTextFieldProps) => (
-    <input id={id} value={value ?? ''} placeholder={placeholder} type={type ?? 'text'} onChange={(e) => onChange?.(e.target.value)} onBlur={onBlur} />
+    <input
+      id={id}
+      value={value ?? ''}
+      placeholder={placeholder}
+      type={type ?? 'text'}
+      onChange={(e) => onChange?.(e.target.value)}
+      onBlur={onBlur}
+    />
   ),
   NumberField: ({ id, value, placeholder, onChange, onBlur }: MockNumberFieldProps) => (
-    <input id={id} value={value ?? ''} placeholder={placeholder} type="number" onChange={(e) => onChange?.(e.target.value)} onBlur={onBlur} />
+    <input
+      id={id}
+      value={value ?? ''}
+      placeholder={placeholder}
+      type="number"
+      onChange={(e) => onChange?.(e.target.value)}
+      onBlur={onBlur}
+    />
   ),
 }));
 
@@ -96,6 +114,12 @@ const noop = () => {};
 const getValue = (_path: string, fallback: t.ConfigValue) => fallback;
 
 describe('SingleFieldRenderer', () => {
+  it('localizes boolean default hints', () => {
+    const localize = (key: string) => ({ com_ui_on: '开启', com_ui_off: '关闭' })[key] ?? key;
+
+    expect(formatDefault(false, localize)).toBe('关闭');
+  });
+
   it('renders a toggle for boolean fields', () => {
     const field = createField({ key: 'enabled', type: 'boolean' });
     render(
@@ -170,6 +194,25 @@ describe('SingleFieldRenderer', () => {
     );
     expect(screen.getByDisplayValue('example.com')).toBeInTheDocument();
     expect(screen.getByDisplayValue('test.org')).toBeInTheDocument();
+  });
+
+  it('localizes capability enum options', () => {
+    const field = createField({
+      key: 'capabilities',
+      type: 'array<enum(deferred_tools | execute_code)>',
+      isArray: true,
+    });
+    render(
+      <SingleFieldRenderer
+        field={field}
+        value={['deferred_tools']}
+        path="section.capabilities"
+        getValue={getValue}
+        onChange={noop}
+      />,
+    );
+
+    expect(screen.getByRole('option', { name: '延迟工具' })).toBeInTheDocument();
   });
 
   it('renders key-value pairs for record fields', () => {

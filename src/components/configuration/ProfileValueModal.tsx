@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PrincipalType } from 'librechat-data-provider';
 import { Icon, Button, Dialog } from '@clickhouse/click-ui';
 import type * as t from '@/types';
-import { getEnumOptions, getArrayItemType, toKVPair } from './utils';
+import { getArrayItemType, getLocalizedEnumOptions, toKVPair } from './utils';
 import { KeyValueField } from './fields/KeyValueField';
 import { TrashButton } from '@/components/shared';
 import { getScopeTypeConfig } from '@/constants';
@@ -117,7 +117,7 @@ function ModalValueControl({
   }
 
   if (controlType === 'select' && fieldSchema) {
-    const options = getEnumOptions(fieldSchema.type);
+    const options = getLocalizedEnumOptions(fieldSchema.key, fieldSchema.type, localize);
     return (
       <div className="flex justify-center">
         <select

@@ -118,6 +118,26 @@ export function getEnumOptions(typeString: string): t.SelectOption[] {
   return [];
 }
 
+export function getLocalizedEnumOptions(
+  fieldKey: string,
+  typeString: string,
+  localize: t.LocalizeFn,
+): t.SelectOption[] {
+  const keyField = fieldKey === 'capabilities' ? 'capability' : fieldKey;
+
+  return getEnumOptions(typeString).map((option) => {
+    const keys = [
+      `com_config_option_${keyField}_${option.value}`,
+      `com_config_option_${option.value}`,
+    ];
+    const localizedLabel = keys
+      .map((key) => ({ key, value: localize(key) }))
+      .find(({ key, value }) => key !== value)?.value;
+
+    return localizedLabel ? { ...option, label: localizedLabel } : option;
+  });
+}
+
 /** Coerces a select value to its runtime type. Numeric enum values arrive as
  *  strings from the HTML select element but the Zod schema expects numbers. */
 export function coerceEnumValue(value: string): string | number {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getControlType,
   getEnumOptions,
+  getLocalizedEnumOptions,
   getArrayItemType,
   splitUnionTypes,
   partitionScopeResetPaths,
@@ -182,6 +183,20 @@ describe('getEnumOptions', () => {
       expect(opt.value).not.toContain(')');
       expect(opt.label).not.toContain(')');
     }
+  });
+});
+
+describe('getLocalizedEnumOptions', () => {
+  it('uses field-specific translations and preserves enum values', () => {
+    const localize = (key: string) =>
+      ({ com_config_option_capability_deferred_tools: '延迟工具' })[key] ?? key;
+
+    expect(
+      getLocalizedEnumOptions('capabilities', 'enum(deferred_tools | execute_code)', localize),
+    ).toEqual([
+      { label: '延迟工具', value: 'deferred_tools' },
+      { label: 'Execute code', value: 'execute_code' },
+    ]);
   });
 });
 
