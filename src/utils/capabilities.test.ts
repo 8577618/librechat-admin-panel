@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { SystemCapabilities } from '@librechat/data-schemas/capabilities';
 import { SystemCapabilities as AdminSystemCapabilities, hasImpliedCapability } from '@/constants';
 import { hasConfigCapability, getTabsWithPermission, isSectionDisabled } from './capabilities';
@@ -13,6 +13,45 @@ describe('platform model capabilities', () => {
         AdminSystemCapabilities.READ_PROVIDERS,
       ),
     ).toBe(true);
+  });
+
+  it('does not duplicate provider capabilities from a separate upstream category', async () => {
+    vi.resetModules();
+    vi.doMock('@librechat/data-schemas/capabilities', () => ({
+      CAPABILITY_CATEGORIES: [
+        {
+          key: 'providers',
+          labelKey: 'com_cap_cat_providers',
+          capabilities: ['manage:providers', 'read:providers'],
+        },
+        {
+          key: 'system',
+          labelKey: 'com_cap_cat_system',
+          capabilities: ['access:admin'],
+        },
+      ],
+      CapabilityImplications: {},
+      expandImplications: (capabilities: string[]) => capabilities,
+      hasImpliedCapability: (held: string[], required: string) => held.includes(required),
+      SystemCapabilities: {
+        ACCESS_ADMIN: 'access:admin',
+        READ_PROVIDERS: 'read:providers',
+        MANAGE_PROVIDERS: 'manage:providers',
+      },
+    }));
+
+    try {
+      const { CAPABILITY_CATEGORIES } = await import('@/constants/capabilities');
+      const categorized = CAPABILITY_CATEGORIES.flatMap((category) => category.capabilities);
+      const systemCategory = CAPABILITY_CATEGORIES.find((category) => category.key === 'system');
+
+      expect(categorized.filter((capability) => capability === 'read:providers')).toHaveLength(1);
+      expect(categorized.filter((capability) => capability === 'manage:providers')).toHaveLength(1);
+      expect(systemCategory?.capabilities).toContain('read:audit_log');
+    } finally {
+      vi.doUnmock('@librechat/data-schemas/capabilities');
+      vi.resetModules();
+    }
   });
 });
 

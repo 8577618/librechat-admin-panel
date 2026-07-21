@@ -64,15 +64,18 @@ export const READ_AUDIT_LOG_CAPABILITY = 'read:audit_log' as const;
  * contains `READ_AUDIT_LOG`; the dedupe pass below keeps it safe to keep
  * shipped until the shim itself is removed.
  */
+const upstreamCapabilities = new Set(
+  UPSTREAM_CAPABILITY_CATEGORIES.flatMap((category) => category.capabilities),
+);
+
 export const CAPABILITY_CATEGORIES: typeof UPSTREAM_CAPABILITY_CATEGORIES =
   UPSTREAM_CAPABILITY_CATEGORIES.map((cat) => {
     if (cat.key !== 'system') return cat;
-    const caps = cat.capabilities as readonly string[];
     const missing = [
       SystemCapabilities.READ_PROVIDERS,
       SystemCapabilities.MANAGE_PROVIDERS,
       READ_AUDIT_LOG_CAPABILITY,
-    ].filter((cap) => !caps.includes(cap));
+    ].filter((cap) => !upstreamCapabilities.has(cap));
     if (missing.length === 0) return cat;
     return {
       ...cat,
