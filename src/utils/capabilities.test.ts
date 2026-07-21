@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { SystemCapabilities } from '@librechat/data-schemas/capabilities';
+import { SystemCapabilities as AdminSystemCapabilities, hasImpliedCapability } from '@/constants';
 import { hasConfigCapability, getTabsWithPermission, isSectionDisabled } from './capabilities';
+
+describe('platform model capabilities', () => {
+  it('keeps provider access available when the upstream package is older', () => {
+    expect(AdminSystemCapabilities.READ_PROVIDERS).toBe('read:providers');
+    expect(AdminSystemCapabilities.MANAGE_PROVIDERS).toBe('manage:providers');
+    expect(
+      hasImpliedCapability(
+        [AdminSystemCapabilities.MANAGE_PROVIDERS],
+        AdminSystemCapabilities.READ_PROVIDERS,
+      ),
+    ).toBe(true);
+  });
+});
 
 describe('hasConfigCapability', () => {
   const makeChecker =

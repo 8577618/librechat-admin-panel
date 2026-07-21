@@ -1,11 +1,45 @@
-import { CAPABILITY_CATEGORIES as UPSTREAM_CAPABILITY_CATEGORIES } from '@librechat/data-schemas/capabilities';
-
-export {
-  SystemCapabilities,
-  expandImplications,
-  hasImpliedCapability,
-  CapabilityImplications,
+import {
+  CAPABILITY_CATEGORIES as UPSTREAM_CAPABILITY_CATEGORIES,
+  CapabilityImplications as UPSTREAM_CAPABILITY_IMPLICATIONS,
+  expandImplications as expandUpstreamImplications,
+  hasImpliedCapability as hasUpstreamImpliedCapability,
+  SystemCapabilities as UPSTREAM_SYSTEM_CAPABILITIES,
 } from '@librechat/data-schemas/capabilities';
+
+const PROVIDER_CAPABILITIES = {
+  READ_PROVIDERS: 'read:providers',
+  MANAGE_PROVIDERS: 'manage:providers',
+} as const;
+
+/**
+ * Keep the admin panel compatible with a backend that has provider grants even
+ * when its separately published data-schemas package predates those constants.
+ */
+export const SystemCapabilities = {
+  ...UPSTREAM_SYSTEM_CAPABILITIES,
+  ...PROVIDER_CAPABILITIES,
+} as const;
+
+export const CapabilityImplications = {
+  ...UPSTREAM_CAPABILITY_IMPLICATIONS,
+  [SystemCapabilities.MANAGE_PROVIDERS]: [SystemCapabilities.READ_PROVIDERS],
+};
+
+export function hasImpliedCapability(held: string[], required: string): boolean {
+  if (hasUpstreamImpliedCapability(held, required)) return true;
+  return (
+    required === SystemCapabilities.READ_PROVIDERS &&
+    held.includes(SystemCapabilities.MANAGE_PROVIDERS)
+  );
+}
+
+export function expandImplications(directCapabilities: string[]): string[] {
+  const expanded = new Set(expandUpstreamImplications(directCapabilities));
+  if (directCapabilities.includes(SystemCapabilities.MANAGE_PROVIDERS)) {
+    expanded.add(SystemCapabilities.READ_PROVIDERS);
+  }
+  return [...expanded];
+}
 
 /**
  * Forward-compat shim: the LibreChat backend gates `/api/admin/audit-log` on
@@ -34,9 +68,14 @@ export const CAPABILITY_CATEGORIES: typeof UPSTREAM_CAPABILITY_CATEGORIES =
   UPSTREAM_CAPABILITY_CATEGORIES.map((cat) => {
     if (cat.key !== 'system') return cat;
     const caps = cat.capabilities as readonly string[];
-    if (caps.includes(READ_AUDIT_LOG_CAPABILITY)) return cat;
+    const missing = [
+      SystemCapabilities.READ_PROVIDERS,
+      SystemCapabilities.MANAGE_PROVIDERS,
+      READ_AUDIT_LOG_CAPABILITY,
+    ].filter((cap) => !caps.includes(cap));
+    if (missing.length === 0) return cat;
     return {
       ...cat,
-      capabilities: [...cat.capabilities, READ_AUDIT_LOG_CAPABILITY],
+      capabilities: [...cat.capabilities, ...missing],
     } as typeof cat;
   });
