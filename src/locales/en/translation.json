@@ -74,6 +74,8 @@
   "com_providers_check_model": "Run check",
   "com_providers_publish": "Publish",
   "com_providers_publish_selected": "Publish selected ({{count}})",
+  "com_providers_published": "Published",
+  "com_providers_publish_success": "Published {{count}} models",
   "com_providers_status_draft": "Draft",
   "com_providers_status_healthy": "Healthy",
   "com_providers_status_unhealthy": "Unhealthy",

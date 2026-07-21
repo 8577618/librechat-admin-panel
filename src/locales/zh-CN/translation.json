@@ -74,6 +74,8 @@
   "com_providers_check_model": "运行检查",
   "com_providers_publish": "发布",
   "com_providers_publish_selected": "发布所选模型（{{count}}）",
+  "com_providers_published": "已发布",
+  "com_providers_publish_success": "已发布 {{count}} 个模型",
   "com_providers_status_draft": "草稿",
   "com_providers_status_healthy": "健康",
   "com_providers_status_unhealthy": "异常",

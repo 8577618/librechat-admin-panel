@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PlatformProviderDiscoveredModel } from '@librechat/data-schemas';
 import { useCapabilities, useLocalize } from '@/hooks';
 import { SystemCapabilities } from '@/constants';
+import { notifySuccess } from '@/utils';
 import {
   checkProviderFn,
   checkProviderModelFn,
@@ -17,6 +18,12 @@ import {
 
 type ProviderAction = 'check' | 'discover' | 'enable' | 'disable';
 type ProviderActionInput = { provider: AdminProvider; action: ProviderAction };
+
+export type ProviderPublicationPayload = {
+  modelIds: string[];
+  defaultModel: string;
+  fallbackModel: string;
+};
 
 const protocols = [
   'anthropic-compatible',
@@ -49,6 +56,38 @@ export function normalizeProviderId(value: string): string {
     .replace(/-+$/g, '');
 }
 
+export function buildPublicationPayload(
+  provider: AdminProvider,
+  selectedModelIds: string[],
+): ProviderPublicationPayload | null {
+  const modelIds = [...new Set(selectedModelIds.map((id) => id.trim()).filter(Boolean))].sort();
+  if (modelIds.length === 0) return null;
+  const defaultModel =
+    provider.defaultModel && modelIds.includes(provider.defaultModel)
+      ? provider.defaultModel
+      : modelIds[0];
+  const fallbackModel =
+    provider.fallbackModel && modelIds.includes(provider.fallbackModel)
+      ? provider.fallbackModel
+      : defaultModel;
+  return { modelIds, defaultModel, fallbackModel };
+}
+
+export function isSamePublication(
+  provider: AdminProvider,
+  payload: ProviderPublicationPayload | null,
+): boolean {
+  if (!payload) return false;
+  const publishedModelIds = provider.publishedModels.map(({ id }) => id).sort();
+  const payloadModelIds = [...payload.modelIds].sort();
+  return (
+    publishedModelIds.length === payloadModelIds.length &&
+    publishedModelIds.every((id, index) => id === payloadModelIds[index]) &&
+    provider.defaultModel === payload.defaultModel &&
+    provider.fallbackModel === payload.fallbackModel
+  );
+}
+
 export function ProvidersPage() {
   const localize = useLocalize();
   const queryClient = useQueryClient();
@@ -68,7 +107,7 @@ export function ProvidersPage() {
   });
 
   const refreshProviders = () => {
-    void queryClient.invalidateQueries({ queryKey: ['adminProviders'] });
+    void queryClient.invalidateQueries({ queryKey: providersQueryOptions.queryKey });
   };
 
   const createMutation = useMutation({
@@ -123,21 +162,62 @@ export function ProvidersPage() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: ({ provider, modelIds }: { provider: AdminProvider; modelIds: string[] }) =>
+    mutationFn: ({
+      provider,
+      payload,
+    }: {
+      provider: AdminProvider;
+      payload: ProviderPublicationPayload;
+    }) =>
       publishProviderModelsFn({
         data: {
           providerId: provider.providerId,
           expectedCatalogVersion: provider.catalogVersion,
-          modelIds,
-          defaultModel: modelIds[0],
-          fallbackModel: modelIds[0],
+          ...payload,
         },
       }),
-    onSuccess: () => {
+    onSuccess: ({ provider: updated }, variables) => {
       setError(null);
+      setSelectedModels((current) => ({
+        ...current,
+        [variables.provider.providerId]: [],
+      }));
+      queryClient.setQueryData<{ providers: AdminProvider[] }>(
+        providersQueryOptions.queryKey,
+        (current) => ({
+          providers: (current?.providers ?? []).map((provider) =>
+            provider.providerId === updated.providerId ? updated : provider,
+          ),
+        }),
+      );
+      notifySuccess(
+        localize('com_providers_publish_success', { count: variables.payload.modelIds.length }),
+      );
       refreshProviders();
     },
-    onError: (mutationError: Error) => setError(mutationError.message),
+    onError: async (mutationError: Error, variables) => {
+      await queryClient.invalidateQueries({ queryKey: providersQueryOptions.queryKey });
+      const refreshed = queryClient.getQueryData<{ providers: AdminProvider[] }>(
+        providersQueryOptions.queryKey,
+      );
+      const provider = refreshed?.providers.find(
+        (candidate) => candidate.providerId === variables.provider.providerId,
+      );
+      if (provider && isSamePublication(provider, variables.payload)) {
+        setError(null);
+        setSelectedModels((current) => ({
+          ...current,
+          [variables.provider.providerId]: [],
+        }));
+        notifySuccess(
+          localize('com_providers_publish_success', {
+            count: variables.payload.modelIds.length,
+          }),
+        );
+        return;
+      }
+      setError(mutationError.message);
+    },
   });
 
   const toggleModel = (providerId: string, modelId: string) => {
@@ -285,6 +365,8 @@ export function ProvidersPage() {
       <div className="flex flex-col gap-3">
         {providers.map((provider) => {
           const selected = selectedModels[provider.providerId] ?? [];
+          const publicationPayload = buildPublicationPayload(provider, selected);
+          const publishedModelIds = new Set(provider.publishedModels.map(({ id }) => id));
           return (
             <article
               key={provider.providerId}
@@ -362,7 +444,14 @@ export function ProvidersPage() {
                     <tbody>
                       {provider.discoveredModels.map((model) => (
                         <tr key={model.id} className="border-t border-(--cui-color-stroke-default)">
-                          <td className="px-2 py-2 font-mono text-xs">{model.id}</td>
+                          <td className="px-2 py-2 text-xs">
+                            <span className="font-mono">{model.id}</span>
+                            {publishedModelIds.has(model.id) && (
+                              <span className="ml-2 text-(--cui-color-text-muted)">
+                                {localize('com_providers_published')}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-2 py-2 text-xs">
                             {localize(modelStatusKey(model.checkStatus))}
                           </td>
@@ -382,7 +471,9 @@ export function ProvidersPage() {
                             <input
                               type="checkbox"
                               aria-label={`${localize('com_providers_publish')} ${model.id}`}
-                              disabled={!canManage || !isCompatible(model)}
+                              disabled={
+                                !canManage || publishMutation.isPending || !isCompatible(model)
+                              }
                               checked={selected.includes(model.id)}
                               onChange={() => toggleModel(provider.providerId, model.id)}
                             />
@@ -393,8 +484,16 @@ export function ProvidersPage() {
                   </table>
                   <button
                     type="button"
-                    disabled={!canManage || selected.length === 0 || publishMutation.isPending}
-                    onClick={() => publishMutation.mutate({ provider, modelIds: selected })}
+                    disabled={
+                      !canManage ||
+                      !publicationPayload ||
+                      publishMutation.isPending ||
+                      isSamePublication(provider, publicationPayload)
+                    }
+                    onClick={() => {
+                      if (!publicationPayload) return;
+                      publishMutation.mutate({ provider, payload: publicationPayload });
+                    }}
                     className="mt-3 rounded-md bg-(--cui-color-background-active) px-3 py-1.5 text-xs font-medium disabled:opacity-50"
                   >
                     {localize('com_providers_publish_selected', { count: selected.length })}
