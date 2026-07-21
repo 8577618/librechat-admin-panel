@@ -58,6 +58,7 @@
   "com_providers_empty": "No platform providers have been configured.",
   "com_providers_load_error": "Failed to load platform providers.",
   "com_providers_id": "Provider ID",
+  "com_providers_id_invalid": "Provider ID must include letters or numbers and may use hyphens between them.",
   "com_providers_protocol": "Protocol",
   "com_providers_name": "Display name",
   "com_providers_base_url": "Gateway URL",

@@ -39,6 +39,16 @@ function isCompatible(model: PlatformProviderDiscoveredModel): boolean {
   return model.checkStatus === 'compatible';
 }
 
+export function normalizeProviderId(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63)
+    .replace(/-+$/g, '');
+}
+
 export function ProvidersPage() {
   const localize = useLocalize();
   const queryClient = useQueryClient();
@@ -62,7 +72,7 @@ export function ProvidersPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: () => createProviderFn({ data: form }),
+    mutationFn: (input: typeof form) => createProviderFn({ data: input }),
     onSuccess: () => {
       setForm({
         providerId: '',
@@ -142,7 +152,12 @@ export function ProvidersPage() {
   const submitCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
-    createMutation.mutate();
+    const normalizedProviderId = normalizeProviderId(form.providerId);
+    if (!normalizedProviderId) {
+      setError(localize('com_providers_id_invalid'));
+      return;
+    }
+    createMutation.mutate({ ...form, providerId: normalizedProviderId });
   };
 
   return (
@@ -185,8 +200,16 @@ export function ProvidersPage() {
             <span>{localize('com_providers_id')}</span>
             <input
               required
+              maxLength={63}
+              placeholder="my-gateway"
               value={form.providerId}
               onChange={(event) => setForm({ ...form, providerId: event.target.value })}
+              onBlur={() =>
+                setForm((current) => ({
+                  ...current,
+                  providerId: normalizeProviderId(current.providerId),
+                }))
+              }
               className="rounded-md border border-(--cui-color-stroke-default) bg-transparent px-3 py-2"
             />
           </label>

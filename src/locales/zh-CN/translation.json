@@ -58,6 +58,7 @@
   "com_providers_empty": "尚未配置平台模型提供商。",
   "com_providers_load_error": "平台模型提供商加载失败。",
   "com_providers_id": "提供商 ID",
+  "com_providers_id_invalid": "提供商 ID 必须包含字母或数字，单词之间可以使用中划线。",
   "com_providers_protocol": "协议",
   "com_providers_name": "显示名称",
   "com_providers_base_url": "网关地址",
